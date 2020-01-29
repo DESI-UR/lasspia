@@ -123,26 +123,28 @@ View the headers of the output file.
 ```
 
 ### Integration
-Run the integration routine, which takes seconds.
+Run the integration routine, which includes l = 0,2,4 Legendre multipoles.
 ```
 ./lasspia.py configs/cmassS_coarse.py routines/integration.py
 ```
 If you get "MemoryError", you can break the integration into slices of
 bins of theta by passing `--nJobs` and `--nCores` (or `--iJob`)
-arguments, and combining the output as in the prior step example.
+arguments, and combining the output as in the prior step example. However,
+running this routine in parallel will remove the Legendre expansion. You
+will have to do this yourself with a Sigma/Pi grid.
 
-View the headers of the output file.
+Run with parallel jobs.
 ```
-./lasspia.py configs/cmassS_coarse.py routines/integration.py --show
+./lasspia.py configs/cmassS_coarse.py routines/integration.py --nJobs 4 --nCores 2
 ```
-Run the integration.plot() method.
+Combine those jobs.
 ```
-./lasspia.py configs/cmassS_coarse.py routines/integration.py --plot
+./lasspia.py configs/cmassS_coarse.py routines/integration.py --nJobs 4 
 ```
 
-## Parallel and Batch Processing
+## More Parallel and Batch Processing
 
-The `combinatorial` and `integration` routines respond to the option
+The `combinatorial` routine (and the `integration` routine, kind-of) responds to the option
 `--nJobs` to break processing into parallelizable units.  Use in
 conjunction with the `--nCores` option to specify the number of
 processes to run locally in parallel, or with the `--iJob` option to
@@ -202,105 +204,14 @@ one of the two strategies explained below.  Such exclusion can
 significantly reduce both the time and memory required for the
 computation.
 
-#### Strategy 1: Proximate Slices
+#### Regions and Z-slicing
 
-The default strategy, implemented when the configuration function
-`regionBasedCombinations()` is defined as `False`, computes only
-galaxy-bin combinations between proximate pairs of slices.  A pair of
-slices are proximate if at least one of their galaxy-bin combinations
-can be encompassed by a window defined by the configuration functions
-`maxDeltaRA()` and 'maxDeltaDec()`.
-
-In order to be effective, this strategy relies on ordering of the
-input such that each slice is localized to have small variance in
-Right Ascension and Declination.  This ordering takes place in the
-`preprocessing` routine regardless of whether this strategy is
-configured, and is defined by the function
-`lasspia.slicing.xyClustersWhere()`.  This function recursively
-partitions a list of two-dimensional points by their mean along the
-dimension with greater variance, until the number of points under
-consideration is less than a limit.
-
-#### Strategy 2: Regions
-
-Another strategy, implemented when the configuration function
-`regionBasedCombinations()` is defined as `True`, computes only
-galaxy-bin combinations within a region and between a region and its
-neighboring regions.  The configuration functions `maxDeltaRA()` and
-`maxDeltaDec()` define region size.  This strategy does not reduce the
-number of galaxy-bin combinations considered as much as the default
-strategy.
-
-## Subsampling and Z-slicing
-
-### Subsampling
-
-You can use a smaller portion of the catalogs as input to the
-algorithm simply by configuring the desired range for any of redshift
-(`binningZ()`), right ascension (`binningRA()`), or declination
-(`binningDec()`).  Catalog entries that fall outside of the defined
-ranges will be excluded from processing, except that the overall
-normalization factors are calculated from the unfiltered catalogs.
-
-### Z-Slicing
-
-It is possible to process data in multiple configurations of
-subsampled redshift, the results of which can be combined at the
-integration step.  For the result to match a single (un-subsampled
-redshift) configuration, the subsampled redshift ranges must overlap
-by at least `maxDeltaZ`, and the configuration option `nBinsMaskZ`
-must be set to the number bins overlapping the prior (lower z values)
-configuration.  The integration step will omit contributions from
-cells with both z-bin indices less than `nBinsMaskZ`, so that results
-can be combined without double-counting.
-
-In order to avoid the need to laboriously write and maintain multiple
-mutually consistent z-slicing configurations, one can define a
-multi-configuration in which consistency is automatic, by using the
-[zSlicing](lasspia/zSlicing.py#L8) function.  The
-returned configuration class has an automatically defined attribute
-`iSliceZ` which can be used to customize the definition of each
-subsample in z, for example by creating a child configuration in which
-`binningRA` is dependent in `iSliceZ`.
-
-For convenience, one can implement mutually consistent z-slicing by
-defining a pair of configuration functions in a class inheriting from
-that returned by `zSlicing`.  The first configuration function,
-`zBreaks`, is an ordered list consisting of the lower bound of the
-lowest z range and the desired upper bound of each z range.  The
-second configuration function, `zMaxBinWidths`, is a corresponding
-list of desired maximum bin widths for each range.  The actual ranges
-and bin widths used may vary slightly from those configured due to the
-constraint that ranges overlap exactly at bin boundaries.
-
-An example configuration showing the use of the `zSlicing` class
-function and the `zBreaks` and `zMaxBinWidths` configuration options
-is provided in
-[cmassS_subsample_byZ.py](configs/cmassS_subsample_byZ.py).
-This configuration defines two slices in z.  The first slice may be
-processed with the following series of commands.
-```
-./lasspia.py configs/cmassS_subsample_byZ.py routines/preprocessing.py --iSliceZ 0
-./lasspia.py configs/cmassS_subsample_byZ.py routines/combinatorial.py --iSliceZ 0
-./lasspia.py configs/cmassS_subsample_byZ.py routines/integration.py --iSliceZ 0
-```
-The second slice may be processed by running the same series of
-commands with `--iSliceZ 1`.  Each slice may be analyzed individually, for example:
-```
-./lasspia.py configs/cmassS_subsample_byZ.py routines/integration.py --iSliceZ 0 --plot
-```
-Alternatively, the slices may be combined at the integration step by omitting the `--iSliceZ` option:
-```
-./lasspia.py configs/cmassS_subsample_byZ.py routines/integration.py
-```
-and the combined result may be subsequently analyzed.
-```
-./lasspia.py configs/cmassS_subsample_byZ.py routines/integration.py --plot
-```
+I have not tried running the new Legendre expansion version of the 
+`integration` step with z-slicing. Proceed with caution for now...
 
 ## Contributing
 
-Pending
+**Zack Brown** - (https://github.com/zbrown89)
 
 ## Versioning
 
