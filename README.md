@@ -131,7 +131,7 @@ If you get "MemoryError", you can break the integration into slices of
 bins of theta by passing `--nJobs` and `--nCores` (or `--iJob`)
 arguments, and combining the output as in the prior step example. However,
 running this routine in parallel will remove the Legendre expansion. You
-will have to do this yourself with a Sigma/Pi grid.
+will have to do this yourself with a sigma/pi grid.
 
 Run with parallel jobs.
 ```
