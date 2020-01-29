@@ -211,7 +211,7 @@ I have not tried running the new Legendre expansion version of the
 
 ## Contributing
 
-**Zack Brown** - (https://github.com/zbrown89)
+**Zack Brown** - [brown](https://github.com/zbrown89)
 
 ## Versioning
 
