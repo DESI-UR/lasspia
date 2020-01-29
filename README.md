@@ -202,7 +202,7 @@ one of the two strategies explained below.  Such exclusion can
 significantly reduce both the time and memory required for the
 computation.
 
-#### Regions and Z-slicing
+## Regions and Z-slicing
 
 I have not tried running the new Legendre expansion version of the 
 `integration` step with z-slicing. Proceed with caution for now...
