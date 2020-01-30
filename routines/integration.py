@@ -71,12 +71,10 @@ class integration(La.routine):
             xi_ell4 = [2*(tpcf_mu_int[i,:]*self.Pell4(muCenters)*dmu).sum()*((2*0+1)/(2)) for i in range(len(sCenters))]
             return(xi_ell0,xi_ell2,xi_ell4)
         
-        def muIntegralerr(tpcf_unc_grid,sCenters,muCenters,dmu):
-            
+        def muIntegralerr(tpcf_unc_grid,sCenters,muCenters,dmu):            
             xi_ell0_unc = [2*np.sqrt(((tpcf_unc_grid[i,:]*dmu)**2).sum())*((2*0+1)/(2)) for i in range(len(sCenters))]
             xi_ell2_unc =[2*np.sqrt(((tpcf_unc_grid[i,:]*self.Pell2(muCenters)*dmu)**2).sum())*((2*2+1)/(2)) for i in range(len(sCenters))]
             xi_ell4_unc = [2*np.sqrt(((tpcf_unc_grid[i,:]*self.Pell4(muCenters)*dmu)**2).sum())*((2*2+1)/(2)) for i in range(len(sCenters))]
-
             return(xi_ell0_unc,xi_ell2_unc,xi_ell4_unc)
 
         def bundleHDU(name, addresses, binning, axes, dropZeros=False, legendre=True, lstep = 0):
