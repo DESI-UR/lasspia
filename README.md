@@ -207,17 +207,15 @@ computation.
 I have not tried running the new Legendre expansion version of the 
 `integration` step with z-slicing. Proceed with caution for now...
 
-## Contributing
-
-**Zack Brown** - [brown](https://github.com/zbrown89)
-
 ## Versioning
 
-Pending
+1.1 (?)
 
 ## Authors
 
 * **Burton Betchart** - *Initial work* - [betchart](https://github.com/betchart)
+
+* **Zack Brown** - [brown](https://github.com/zbrown89)
 
 See also the list of [contributors](https://github.com/betchart/lasspia/contributors) who participated in this project.
 
