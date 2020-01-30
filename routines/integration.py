@@ -36,6 +36,8 @@ class integration(La.routine):
     def omegasMKL(self): return self.config.omegasMKL()
     def H0(self): return self.config.H0()
     def muBinEdges(self): return np.linspace(0,1,121)
+    def Pell2(self,mu): return((1/2)*(3*mu**2-1))
+    def Pell4(self,mu): return((1/8)*(35*mu**4-30*mu**2+3)) 
 
     @timedHDU
     def integrationParameters(self):
@@ -63,6 +65,19 @@ class integration(La.routine):
         slcT =( slice(None) if self.iJob is None else
                 La.slicing.slices(len(self.getInput('centertheta').data),
                                   N=self.nJobs)[self.iJob] )
+        def muIntegralcorr(tpcf_mu_int,sCenters,muCenters,dmu):
+            xi_ell0 = np.array([2*(tpcf_mu_int[i,:]*dmu).sum()*((2*0+1)/(2)) for i in range(len(sCenters))])
+            xi_ell2 =[2*(tpcf_mu_int[i,:]*self.Pell2(muCenters)*dmu).sum()*((2*0+1)/(2)) for i in range(len(sCenters))]
+            xi_ell4 = [2*(tpcf_mu_int[i,:]*self.Pell4(muCenters)*dmu).sum()*((2*0+1)/(2)) for i in range(len(sCenters))]
+            return(xi_ell0,xi_ell2,xi_ell4)
+        
+        def muIntegralerr(tpcf_unc_grid,sCenters,muCenters,dmu):
+            
+            xi_ell0_unc = [2*np.sqrt(((tpcf_unc_grid[i,:]*dmu)**2).sum())*((2*0+1)/(2)) for i in range(len(sCenters))]
+            xi_ell2_unc =[2*np.sqrt(((tpcf_unc_grid[i,:]*self.Pell2(muCenters)*dmu)**2).sum())*((2*2+1)/(2)) for i in range(len(sCenters))]
+            xi_ell4_unc = [2*np.sqrt(((tpcf_unc_grid[i,:]*self.Pell4(muCenters)*dmu)**2).sum())*((2*2+1)/(2)) for i in range(len(sCenters))]
+
+            return(xi_ell0_unc,xi_ell2_unc,xi_ell4_unc)
 
         def bundleHDU(name, addresses, binning, axes, dropZeros=False, legendre=True, lstep = 0):
             if (legendre == False) & (lstep == 0):
@@ -130,25 +145,8 @@ class integration(La.routine):
                            tpcf_mu_int[i,j] = ((dd[i,j]/nDD_2d)+(rr[i,j]/nRR_2d)-2*(dr[i,j]/nDR_2d))/(rr[i,j]/nRR_2d)
                            tpcf_unc_grid[i,j] = (np.sqrt(dde2[i,j])/nDD_2d)/(rr[i,j]/nRR_2d)
                 del rr, dr, dd, dde2
-                dmu = muCenters[1]-muCenters[0]
-                def Pell0(mu): return(1)
-                def Pell2(mu): return((1/2)*(3*mu**2-1))
-                def Pell4(mu): return((1/8)*(35*mu**4-30*mu**2+3)) 
-                xi_ell0 = np.zeros(len(sCenters))
-                xi_ell0_unc = np.zeros(len(sCenters))
-                xi_ell2 = np.zeros(len(sCenters))
-                xi_ell2_unc = np.zeros(len(sCenters))
-                xi_ell4 = np.zeros(len(sCenters))
-                xi_ell4_unc = np.zeros(len(sCenters))
-                for i in range(len(sCenters)):
-                    
-                    xi_ell0[i] = 2*(tpcf_mu_int[i,:]*Pell0(muCenters)*dmu).sum()*((2*0+1)/(2))
-                    xi_ell0_unc[i] = 2*np.sqrt(((tpcf_mu_int[i,:]*Pell0(muCenters)*dmu)**2).sum())*((2*0+1)/(2))        
-                    xi_ell2[i] = 2*(tpcf_mu_int[i,:]*Pell2(muCenters)*dmu).sum()*((2*0+1)/(2))
-                    xi_ell2_unc[i] = 2*np.sqrt(((tpcf_mu_int[i,:]*Pell2(muCenters)*dmu)**2).sum())*((2*2+1)/(2))
-                    xi_ell4[i] = 2*(tpcf_mu_int[i,:]*Pell4(muCenters)*dmu).sum()*((2*0+1)/(2))
-                    xi_ell4_unc[i] = 2*np.sqrt(((tpcf_mu_int[i,:]*Pell4(muCenters)*dmu)**2).sum())*((2*4+1)/(2))
-                    
+                xi_ell0,xi_ell2,xi_ell4 = muIntegralcorr(tpcf_mu_int,sCenters,muCenters,muCenters[1]-muCenters[0])
+                xi_ell0_unc,xi_ell2_unc,xi_ell4_unc = muIntegralerr(tpcf_unc_grid,sCenters,muCenters,muCenters[1]-muCenters[0])
                 grid = np.asarray(list(range(len(self.returnBins(self.config.binningS(), "centerS")) )))
                 columns = [fits.Column(name='iS', array=grid, format='I')]
                 columns.append(fits.Column(name='ell0corr', array=xi_ell0, format='D'))
