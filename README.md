@@ -46,7 +46,7 @@ The included configurations rely on DR9 data from the Sloan Digital Sky Survey:
 
 Clone the repository to your local system:
 ```
-git clone https://github.com/betchart/lasspia.git
+git clone https://github.com/zbrown89/lasspia.git
 ```
 
 If desired, use virtualenv to install the prerequisites:
