@@ -11,26 +11,25 @@ class integration(La.routine):
 
     def __call__(self):
         if self.nJobs != None:
+            self.hdus.append(self.integrationParameters())
+            self.hdus.append(self.binCenters(self.config.binningS(), "centerS") )
+            self.hdus.extend(self.tpcf())
+            self.hdus.append(self.binCenters(self.config.binningSigma(), "centerSigma") )
+            self.hdus.append(self.binCenters(self.config.binningPi(), "centerPi") )
+            self.writeToFile()
+        else:
             try:
                 self.hdus.append(self.integrationParameters())
-                self.hdus.append(self.binCenters(self.config.binningS(), "centerS") )
-                self.hdus.append(self.binCenters(self.config.binningSigma(), "centerSigma") )
-                self.hdus.append(self.binCenters(self.config.binningPi(), "centerPi") )
-                self.hdus.extend(self.tpcf())
+                self.hdus.append(self.binCenters(self.config.binningS(), "centerS") )   
+                self.hdus.extend(self.tpcf())                                                
                 self.writeToFile()
             except MemoryError as e:
                 print(e.__class__.__name__, e, file=self.out)
                 print('\n'.join(['Use less memory by integrating via multiple jobs.',
                                  'For example, use options: --nJobs 8 --nCores 1',
                                  'Then combine job outputs: --nJobs 8',
-                                 'However, you must then perform the Legendre expansion',
-                                 'manually on your Sigma/Pi grid.']),
-                                file=self.out)                                  
-        else:
-            self.hdus.append(self.integrationParameters())
-            self.hdus.append(self.binCenters(self.config.binningS(), "centerS") )   
-            self.hdus.extend(self.tpcf())                                                
-            self.writeToFile()                                                           
+                                 'Note: This will perform the Legendre expansion on the sigma/pi grid.']),
+                                file=self.out)                                                        
         return
 
     def omegasMKL(self): return self.config.omegasMKL()
@@ -356,17 +355,17 @@ class integration(La.routine):
         shape2D = (self.config.binningSigma()['bins'], self.config.binningPi()['bins'])
 
         with fits.open(jobFiles[0]) as h0:
-            for h in ['parameters','centerS','centerSigma','centerPi']:
+            for h in ['parameters','centerS']:
                 self.hdus.append(h0[h])
             hdu = h0['TPCF']
-            tpcf2d = AdderTPCF2D(h0['TPCF2D'], shape2D)
             cputime = hdu.header['cputime']
-
+            tpcf2d = AdderTPCF2D(h0['TPCF2D'], shape2D)
+            
             for jF in jobFiles[1:]:
                 with fits.open(jF) as jfh:
                     assert np.all(h0['parameters'].header[item] == jfh['parameters'].header[item]
                                   for item in ['lightspd','H0','omegaM','omegaK','omegaL'])
-                    for axis in ['centerS','centerSigma','centerPi']:
+                    for axis in ['centerS']:
                         assert np.all(h0[axis].data['binCenter'] == jfh[axis].data['binCenter'])
 
                     cputime += jfh['TPCF'].header['cputime']
@@ -374,8 +373,28 @@ class integration(La.routine):
                     for col in ['RR','DR','DD','DDe2']:
                         hdu.data[col] += jfh['TPCF'].data[col]
             hdu.header['cputime'] = cputime
-            self.hdus.append(tpcf2d.fillHDU(h0['TPCF2D']))
-            self.hdus.append(hdu)
+        
+            tpcf_calc = np.zeros(len(hdu.data))
+            tpcf_unc_calc = np.zeros(len(hdu.data))
+            for i in range(len(hdu.data)):
+                if hdu.data['RR'][i] !=0:
+                    tpcf_calc[i] = ((hdu.data['DD'][i]/hdu.header['NORMDD'])+(hdu.data['RR'][i]/hdu.header['NORMRR'])
+                                    -2*(hdu.data['DR'][i]/hdu.header['NORMDR']))/(hdu.data['RR'][i]/hdu.header['NORMRR'])
+                    tpcf_unc_calc[i] = (np.sqrt(hdu.data['DDe2'][i])/hdu.header['NORMDD'])/(hdu.data['RR'][i]/hdu.header['NORMRR'])
+
+            new_columns = []
+            for ocol in ['iS','RR','DR','DD','DDe2']:
+                new_columns.append(fits.Column(name=ocol, array=hdu.data[ocol], format='D'))  
+            new_columns.append(fits.Column(name='LScorr', array=tpcf_calc, format='D'))
+            new_columns.append(fits.Column(name='LScorrerr', array=tpcf_unc_calc, format='D')) 
+            new_1d_hdu = fits.BinTableHDU.from_columns(new_columns)
+
+            for head in ['NORMDD','NORMDR','NORMDD','cputime']:
+                new_1d_hdu.header[head] = hdu.header[head]
+            
+            self.hdus.append(new_1d_hdu)
+            #self.hdus.append(h0[5]) #Sigmas            
+            #self.hdus.append(h0[6]) #Pis
             self.writeToFile()
         return
 
