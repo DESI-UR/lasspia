@@ -14,6 +14,7 @@ class integration(La.routine):
             self.hdus.append(self.integrationParameters())
             self.hdus.append(self.binCenters(self.config.binningS(), "centerS") )
             self.hdus.extend(self.tpcf())
+
             self.hdus.append(self.binCenters(self.config.binningSigma(), "centerSigma") )
             self.hdus.append(self.binCenters(self.config.binningPi(), "centerPi") )
             self.writeToFile()
@@ -21,7 +22,10 @@ class integration(La.routine):
             try:
                 self.hdus.append(self.integrationParameters())
                 self.hdus.append(self.binCenters(self.config.binningS(), "centerS") )   
-                self.hdus.extend(self.tpcf())                                                
+                self.hdus.extend(self.tpcf())
+
+                self.hdus.append(self.binCenters(self.config.binningSigma(), "centerSigma") )
+                self.hdus.append(self.binCenters(self.config.binningPi(), "centerPi") )
                 self.writeToFile()
             except MemoryError as e:
                 print(e.__class__.__name__, e, file=self.out)
@@ -29,14 +33,14 @@ class integration(La.routine):
                                  'For example, use options: --nJobs 8 --nCores 1',
                                  'Then combine job outputs: --nJobs 8',
                                  'Note: This will perform the Legendre expansion on the sigma/pi grid.']),
-                                file=self.out)                                                        
+                                file=self.out)                                                       
         return
 
     def omegasMKL(self): return self.config.omegasMKL()
     def H0(self): return self.config.H0()
     def muBinEdges(self): return np.linspace(0,1,121)
     def Pell2(self,mu): return((1/2)*(3*mu**2-1))
-    def Pell4(self,mu): return((1/8)*(35*mu**4-30*mu**2+3)) 
+    def Pell4(self,mu): return((1/8)*(35*mu**4-30*mu**2+3))
 
     @timedHDU
     def integrationParameters(self):
@@ -152,7 +156,7 @@ class integration(La.routine):
                 columns.append(fits.Column(name='ell2correrr', array=xi_ell2_unc, format='D'))
                 columns.append(fits.Column(name='ell4corr', array=xi_ell4, format='D'))
                 columns.append(fits.Column(name='ell4correrr', array=xi_ell4_unc, format='D'))
-                hdu = fits.BinTableHDU.from_columns(columns,name=name)
+                hdu = fits.BinTableHDU.from_columns(columns,name='Expanded TPCF')
                 hdu.header.add_comment("Legendre multipoles of the TPCF (using LS estimator)")
                 return hdu
 
@@ -179,11 +183,10 @@ class integration(La.routine):
 
             hdu = bundleHDU("TPCF", s, b, ["S"],legendre=True,lstep = 0)
             hdu2 = bundleHDU("TPCF2D", sigmaPis, b2, ["Sigma", "Pi"], dropZeros=True,legendre=True,lstep = 1)
-
-            return [hdu,hdu2]
-            #return [hdu2]                                                                   
+            hdu3 = bundleHDU("TPCF2D", sigmaPis, b2, ["Sigma", "Pi"], dropZeros=True,legendre=False,lstep = 0)
             
-
+            return [hdu,hdu2,hdu3]
+            
     def sigmaPiGrid(self, slcT):
         '''A cubic grid of (sigma, pi) values
         for pairs of galaxies with coordinates (iTheta, iZ1, iZ2).'''
@@ -306,7 +309,6 @@ class integration(La.routine):
             iZ2 = iZ + diZ
             counts = utzz[wName][slc][mask] * self.zMask[iZ,iZ2]
             
-            # 2D !
             if addresses[iTh,iZ,iZ2].shape == (len(addresses[iTh,iZ,iZ2]),2):
                 spairs = (np.sqrt((addresses[iTh,iZ,iZ2][:,0])**2+(addresses[iTh,iZ,iZ2][:,1])**2))
                 mupairs = addresses[iTh,iZ,iZ2][:,1]/spairs
@@ -320,7 +322,6 @@ class integration(La.routine):
                 del counts
                 return dd
 
-            # 1D !
             else:
                 dd = np.histogramdd(addresses[iTh,iZ,iZ2], weights=counts, **binning)[0]
                 del counts
@@ -372,8 +373,7 @@ class integration(La.routine):
                     tpcf2d += AdderTPCF2D(jfh['TPCF2D'], shape2D)
                     for col in ['RR','DR','DD','DDe2']:
                         hdu.data[col] += jfh['TPCF'].data[col]
-            hdu.header['cputime'] = cputime
-        
+                        
             tpcf_calc = np.zeros(len(hdu.data))
             tpcf_unc_calc = np.zeros(len(hdu.data))
             for i in range(len(hdu.data)):
@@ -391,10 +391,70 @@ class integration(La.routine):
 
             for head in ['NORMDD','NORMDR','NORMDD','cputime']:
                 new_1d_hdu.header[head] = hdu.header[head]
-            
+                
+            new_1d_hdu.header['cputime'] = cputime
             self.hdus.append(new_1d_hdu)
-            #self.hdus.append(h0[5]) #Sigmas            
-            #self.hdus.append(h0[6]) #Pis
+
+            table2d = tpcf2d.fillHDU(h0['TPCF2D'])
+            
+            gLen = len(hdu.data['iS'])
+            tpcf_sigpi = np.zeros((gLen,gLen))
+            tpcferr_sigpi = np.zeros((gLen,gLen))
+            MuatLoc = np.zeros((gLen,gLen))
+            SatLoc = np.zeros((gLen,gLen))
+            sCenters = self.returnBins(self.config.binningS(), "centerS")
+            
+            for idx in range(len(table2d.data)):
+                sepCalc = np.sqrt(sCenters[table2d.data['iPi'][idx]]**2+sCenters[table2d.data['iSigma'][idx]]**2)
+                MuatLoc[table2d.data['iPi'][idx],table2d.data['iSigma'][idx]] = sCenters[table2d.data['iPi'][idx]]/sepCalc
+                SatLoc[table2d.data['iPi'][idx],table2d.data['iSigma'][idx]] = sepCalc
+                if table2d.data['RR'][idx] != 0.:
+                    tval = ((table2d.data['DD'][idx]/table2d.header['NORMDD'])+(table2d.data['RR'][idx]/table2d.header['NORMRR'])-
+                            2*(table2d.data['DR'][idx]/table2d.header['NORMDR']))/(table2d.data['RR'][idx]/table2d.header['NORMRR'])
+                    tuncval = (np.sqrt(table2d.data['DDe2'][idx])/table2d.header['NORMDD'])/(table2d.data['RR'][idx]/table2d.header['NORMRR'])
+                    tpcf_sigpi[table2d.data['iPi'][idx],table2d.data['iSigma'][idx]] = tval
+                    tpcferr_sigpi[table2d.data['iPi'][idx],table2d.data['iSigma'][idx]] = tuncval
+
+            halfspace = (sCenters[1]-sCenters[0])/2
+            sBinEdges = np.linspace(sCenters[0]-halfspace,sCenters[-1]+halfspace,len(sCenters)+1)
+
+            dmuGrid = (2*halfspace)/SatLoc
+            xi_ell0_est = np.zeros(gLen)
+            xi_ell0err_est = np.zeros(gLen)
+
+            xi_ell2_est = np.zeros(gLen)
+            xi_ell2err_est = np.zeros(gLen)
+
+            xi_ell4_est = np.zeros(gLen)
+            xi_ell4err_est = np.zeros(gLen)
+
+            for j in range(gLen):
+                cond = (SatLoc > sBinEdges[j])&(SatLoc <= sBinEdges[j+1])
+                xi_ell0_est[j] = ((2*0+1)/2)*(tpcf_sigpi[cond]*dmuGrid[cond]).sum()
+                xi_ell0err_est[j] = ((2*0+1)/2)*(tpcferr_sigpi[cond]*dmuGrid[cond]).sum()
+                
+                xi_ell2_est[j] = ((2*2+1)/2)*(self.Pell2(MuatLoc[cond])*tpcf_sigpi[cond]*dmuGrid[cond]).sum()
+                xi_ell2err_est[j] = ((2*2+1)/2)*(self.Pell2(MuatLoc[cond])*tpcferr_sigpi[cond]*dmuGrid[cond]).sum()
+                
+                xi_ell4_est[j] = ((2*4+1)/2)*(self.Pell4(MuatLoc[cond])*tpcf_sigpi[cond]*dmuGrid[cond]).sum()
+                xi_ell4err_est[j] = ((2*4+1)/2)*(self.Pell4(MuatLoc[cond])*tpcferr_sigpi[cond]*dmuGrid[cond]).sum()
+
+            grid = np.asarray(list(range(len(self.returnBins(self.config.binningS(), "centerS")) )))
+            columns = [fits.Column(name='iS', array=grid, format='I')]
+            columns.append(fits.Column(name='ell0corr', array=xi_ell0_est, format='D'))
+            columns.append(fits.Column(name='ell0correrr', array=xi_ell0err_est, format='D'))
+            columns.append(fits.Column(name='ell2corr', array=xi_ell2_est, format='D'))
+            columns.append(fits.Column(name='ell2correrr', array=xi_ell2err_est, format='D'))
+            columns.append(fits.Column(name='ell4corr', array=xi_ell4_est, format='D'))
+            columns.append(fits.Column(name='ell4correrr', array=xi_ell4err_est, format='D'))
+            hduleg = fits.BinTableHDU.from_columns(columns,name='Expanded TPCF')
+            hduleg.header.add_comment("Legendre multipoles of the TPCF (using LS estimator)"+"Caution, these multipoles are estimated!")
+            self.hdus.append(hduleg)
+            
+            self.hdus.append(table2d)
+            self.hdus.append(h0[5])            
+            self.hdus.append(h0[6])
+
             self.writeToFile()
         return
 
