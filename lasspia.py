@@ -38,6 +38,9 @@ def parseArgs():
     parser.add_argument('--iSliceZ', metavar='iSliceZ', type=int, nargs=1,
                         help='Set the index of the z-slice (only for classes inheriting from lasspia/zSlicing.py:SlicesZ.')
 
+    parser.add_argument('--grid2d', action='store_true',
+                        help='Will output the 2D distributions as functions of sigma and pi if True.')
+
     args = parser.parse_args()
     parseEnv(args)
     return args
@@ -82,11 +85,15 @@ if __name__ == "__main__":
         routine = getInstance(args.routineFile, (config,), kwargs)
         if args.show: routine.showFitsHeaders()
         elif args.plot: routine.plot()
-        elif args.nJobs: routine.combineOutput()
+        
         elif (issubclass(config.__class__, SlicesZ)
               and config.iSliceZ is None):
             routine.combineOutputZ()
-        else: routine()
+        elif (args.grid2d == True)&(args.nJobs == None): routine(grid2d = True)
+        elif (args.grid2d == False)&(args.nJobs == None): routine()
+        
+        elif (args.nJobs != 0)&(args.grid2d == True): routine.combineOutput(grid2d = True)
+        elif (args.nJobs != 0)&(args.grid2d == False): routine.combineOutput(grid2d = False)
 
     elif type(kwargs) is list:
         routines = [getInstance(args.routineFile, (config,), kw) for kw in kwargs]
