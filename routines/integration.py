@@ -9,23 +9,24 @@ from lasspia.timing import timedHDU
 
 class integration(La.routine):
 
-    def __call__(self):
+    def __call__(self,grid2d = False):
         if self.nJobs != None:
             self.hdus.append(self.integrationParameters())
             self.hdus.append(self.binCenters(self.config.binningS(), "centerS") )
             self.hdus.extend(self.tpcf())
-
             self.hdus.append(self.binCenters(self.config.binningSigma(), "centerSigma") )
             self.hdus.append(self.binCenters(self.config.binningPi(), "centerPi") )
             self.writeToFile()
         else:
             try:
                 self.hdus.append(self.integrationParameters())
-                self.hdus.append(self.binCenters(self.config.binningS(), "centerS") )   
-                self.hdus.extend(self.tpcf())
-
-                self.hdus.append(self.binCenters(self.config.binningSigma(), "centerSigma") )
-                self.hdus.append(self.binCenters(self.config.binningPi(), "centerPi") )
+                self.hdus.append(self.binCenters(self.config.binningS(), "centerS") )
+                if grid2d == True:
+                    self.hdus.extend(self.tpcf(grid2d = True)) 
+                    self.hdus.append(self.binCenters(self.config.binningSigma(), "centerSigma") )
+                    self.hdus.append(self.binCenters(self.config.binningPi(), "centerPi") )
+                else:
+                    self.hdus.extend(self.tpcf(grid2d = False))
                 self.writeToFile()
             except MemoryError as e:
                 print(e.__class__.__name__, e, file=self.out)
@@ -60,7 +61,7 @@ class integration(La.routine):
         return centers
 
     @timedHDU
-    def tpcf(self):
+    def tpcf(self,grid2d = False):
         self.pdfz = self.getInput('pdfZ').data['probability']
         self.zMask = np.ones(len(self.pdfz)**2, dtype=np.int).reshape(len(self.pdfz),len(self.pdfz))
         self.zMask[:self.config.nBinsMaskZ(),:self.config.nBinsMaskZ()] = 0
@@ -185,9 +186,10 @@ class integration(La.routine):
 
             hdu = bundleHDU("TPCF", s, b, ["S"],legendre=True,lstep = 0)
             hdu2 = bundleHDU("TPCF2D", sigmaPis, b2, ["Sigma", "Pi"], dropZeros=True,legendre=True,lstep = 1)
-            hdu3 = bundleHDU("TPCF2D", sigmaPis, b2, ["Sigma", "Pi"], dropZeros=True,legendre=False,lstep = 0)
-            
-            return [hdu,hdu2,hdu3]
+            if grid2d == True: 
+                hdu3 = bundleHDU("TPCF2D", sigmaPis, b2, ["Sigma", "Pi"], dropZeros=True,legendre=False,lstep = 0)
+                return [hdu,hdu2,hdu3]
+            else: return [hdu,hdu2]
             
     def sigmaPiGrid(self, slcT):
         '''A cubic grid of (sigma, pi) values
@@ -350,7 +352,7 @@ class integration(La.routine):
         hdulist = fits.open(self.inputFileName)
         return hdulist[name]
 
-    def combineOutput(self, jobFiles = None):
+    def combineOutput(self, jobFiles = None, grid2d = False):
         if not jobFiles:
             jobFiles = [self.outputFileName + self.jobString(iJob)
                         for iJob in range(self.nJobs)]
@@ -453,9 +455,10 @@ class integration(La.routine):
             hduleg.header.add_comment("Legendre multipoles of the TPCF (using LS estimator)"+"Caution, these multipoles are estimated!")
             self.hdus.append(hduleg)
             
-            self.hdus.append(table2d)
-            self.hdus.append(h0[5])            
-            self.hdus.append(h0[6])
+            if grid2d == True:
+                self.hdus.append(table2d)
+                self.hdus.append(h0[5])            
+                self.hdus.append(h0[6])
 
             self.writeToFile()
         return
