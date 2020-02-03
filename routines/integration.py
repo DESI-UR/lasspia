@@ -121,7 +121,9 @@ class integration(La.routine):
                 tpcf_unc_calc = np.zeros(len(mask))
                 for ind in range(len(mask)):
                     if rr[mask][ind] != 0.:
-                        tpcf_calc[ind] = ((dd[mask][ind]/self.getInput('uThetaZZ').header['NORM'])+(rr[mask][ind]/self.getInput('fTheta').header['NORM'])-2*(dr[mask][ind]/self.getInput('gThetaZ').header['NORM']))/(rr[mask][ind]/self.getInput('fTheta').header['NORM'])
+                        tpcf_calc[ind] = ((dd[mask][ind]/self.getInput('uThetaZZ').header['NORM'])+
+                                          (rr[mask][ind]/self.getInput('fTheta').header['NORM'])-
+                                          2*(dr[mask][ind]/self.getInput('gThetaZ').header['NORM']))/(rr[mask][ind]/self.getInput('fTheta').header['NORM'])
                         tpcf_unc_calc[ind] = (np.sqrt(dde2[mask][ind])/self.getInput('uThetaZZ').header['NORM'])/(rr[mask][ind]/self.getInput('fTheta').header['NORM'])
                 columns.append(fits.Column(name='LScorr', array=tpcf_calc, format='D'))
                 columns.append(fits.Column(name='LScorrerr', array=tpcf_unc_calc, format='D'))
