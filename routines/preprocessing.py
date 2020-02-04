@@ -121,7 +121,7 @@ class preprocessing(La.routine):
         return [hduSlc, hduAng, hduAngzD]
 
 
-    def plot(self):
+    def plot(self,smax=None):
         from matplotlib import pyplot as plt
         from matplotlib.backends.backend_pdf import PdfPages
         infile = self.outputFileName
