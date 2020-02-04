@@ -71,14 +71,14 @@ class integration(La.routine):
                                   N=self.nJobs)[self.iJob] )
         def muIntegralcorr(tpcf_mu_int,sCenters,muCenters,dmu):
             xi_ell0 = np.array([2*(tpcf_mu_int[i,:]*dmu).sum()*((2*0+1)/(2)) for i in range(len(sCenters))])
-            xi_ell2 =[2*(tpcf_mu_int[i,:]*self.Pell2(muCenters)*dmu).sum()*((2*0+1)/(2)) for i in range(len(sCenters))]
-            xi_ell4 = [2*(tpcf_mu_int[i,:]*self.Pell4(muCenters)*dmu).sum()*((2*0+1)/(2)) for i in range(len(sCenters))]
+            xi_ell2 =[2*(tpcf_mu_int[i,:]*self.Pell2(muCenters)*dmu).sum()*((2*2+1)/(2)) for i in range(len(sCenters))]
+            xi_ell4 = [2*(tpcf_mu_int[i,:]*self.Pell4(muCenters)*dmu).sum()*((2*4+1)/(2)) for i in range(len(sCenters))]
             return(xi_ell0,xi_ell2,xi_ell4)
         
         def muIntegralerr(tpcf_unc_grid,sCenters,muCenters,dmu):            
             xi_ell0_unc = [2*np.sqrt(((tpcf_unc_grid[i,:]*dmu)**2).sum())*((2*0+1)/(2)) for i in range(len(sCenters))]
             xi_ell2_unc =[2*np.sqrt(((tpcf_unc_grid[i,:]*self.Pell2(muCenters)*dmu)**2).sum())*((2*2+1)/(2)) for i in range(len(sCenters))]
-            xi_ell4_unc = [2*np.sqrt(((tpcf_unc_grid[i,:]*self.Pell4(muCenters)*dmu)**2).sum())*((2*2+1)/(2)) for i in range(len(sCenters))]
+            xi_ell4_unc = [2*np.sqrt(((tpcf_unc_grid[i,:]*self.Pell4(muCenters)*dmu)**2).sum())*((2*4+1)/(2)) for i in range(len(sCenters))]
             return(xi_ell0_unc,xi_ell2_unc,xi_ell4_unc)
 
         def bundleHDU(name, addresses, binning, axes, dropZeros=False, legendre=True, lstep = 0):
@@ -393,14 +393,12 @@ class integration(La.routine):
             new_columns.append(fits.Column(name='LScorrerr', array=tpcf_unc_calc, format='D')) 
             new_1d_hdu = fits.BinTableHDU.from_columns(new_columns)
 
-            for head in ['NORMDD','NORMDR','NORMDD','cputime']:
+            for head in ['NORMRR','NORMDR','NORMDD','cputime']:
                 new_1d_hdu.header[head] = hdu.header[head]
                 
             new_1d_hdu.header['cputime'] = cputime
             self.hdus.append(new_1d_hdu)
-
             table2d = tpcf2d.fillHDU(h0['TPCF2D'])
-            
             gLen = len(hdu.data['iS'])
             tpcf_sigpi = np.zeros((gLen,gLen))
             tpcferr_sigpi = np.zeros((gLen,gLen))
@@ -434,14 +432,12 @@ class integration(La.routine):
 
             for j in range(gLen):
                 cond = (SatLoc > sBinEdges[j])&(SatLoc <= sBinEdges[j+1])
-                xi_ell0_est[j] = ((2*0+1)/2)*(tpcf_sigpi[cond]*dmuGrid[cond]).sum()
-                xi_ell0err_est[j] = ((2*0+1)/2)*(tpcferr_sigpi[cond]*dmuGrid[cond]).sum()
-                
-                xi_ell2_est[j] = ((2*2+1)/2)*(self.Pell2(MuatLoc[cond])*tpcf_sigpi[cond]*dmuGrid[cond]).sum()
-                xi_ell2err_est[j] = ((2*2+1)/2)*(self.Pell2(MuatLoc[cond])*tpcferr_sigpi[cond]*dmuGrid[cond]).sum()
-                
-                xi_ell4_est[j] = ((2*4+1)/2)*(self.Pell4(MuatLoc[cond])*tpcf_sigpi[cond]*dmuGrid[cond]).sum()
-                xi_ell4err_est[j] = ((2*4+1)/2)*(self.Pell4(MuatLoc[cond])*tpcferr_sigpi[cond]*dmuGrid[cond]).sum()
+                xi_ell0_est[j] = (tpcf_sigpi[cond]*dmuGrid[cond]).sum()
+                xi_ell0err_est[j] = (tpcferr_sigpi[cond]*dmuGrid[cond]).sum()
+                xi_ell2_est[j] = (2*(2*2+1)/2)*(self.Pell2(MuatLoc[cond])*tpcf_sigpi[cond]*dmuGrid[cond]).sum()
+                xi_ell2err_est[j] = (2*(2*2+1)/2)*(self.Pell2(MuatLoc[cond])*tpcferr_sigpi[cond]*dmuGrid[cond]).sum()
+                xi_ell4_est[j] = (2*(2*4+1)/2)*(self.Pell4(MuatLoc[cond])*tpcf_sigpi[cond]*dmuGrid[cond]).sum()
+                xi_ell4err_est[j] = (2*(2*4+1)/2)*(self.Pell4(MuatLoc[cond])*tpcferr_sigpi[cond]*dmuGrid[cond]).sum()
 
             grid = np.asarray(list(range(len(self.returnBins(self.config.binningS(), "centerS")) )))
             columns = [fits.Column(name='iS', array=grid, format='I')]
@@ -470,56 +466,103 @@ class integration(La.routine):
                   for iZ in range(len(self.config.binningsZ()))]
         self.combineOutput(zFiles)
 
-    def plot(self):
+    def plot(self,smax):
         from matplotlib import pyplot as plt
         from matplotlib.backends.backend_pdf import PdfPages
         infile = self.outputFileName
 
-        tpcf = fits.getdata(infile, 'TPCF')
-        centerS = fits.getdata(infile, 'centerS').binCenter
-        nRR,nDR,nDD = (lambda h:
-                       (h['normrr'],
-                        h['normdr'],
-                        h['normdd']))(fits.getheader(infile, 'TPCF'))
+        def getData1Ddists(infile,smax):
+            dat_1d = fits.open(infile)[3]
+            sep1d = fits.open(infile)[2].data['binCenter']
+            RRnorm,DRnorm,DDnorm = (dat_1d.data['RR']/dat_1d.header['NORMRR']),(dat_1d.data['DR']/dat_1d.header['NORMDR']),(dat_1d.data['DD']/dat_1d.header['NORMDD'])
+            condition = (sep1d <= smax)
+            return(sep1d[condition],RRnorm[condition],DRnorm[condition],DDnorm[condition])
+        
+        def getData1Dxiss(infile,smax):
+            dat_1d = fits.open(infile)[3]
+            sep1d = fits.open(infile)[2].data['binCenter']
+            sep1derr = (sep1d[1]-sep1d[0])/2
+            tpcf1d,tpcf1derr = dat_1d.data['LScorr'],dat_1d.data['LScorrerr']
+            condition = (sep1d <= smax)
+            return(sep1d[condition],sep1derr,tpcf1d[condition],tpcf1derr[condition])
 
-        def tpcfPlot(pdf, binFactor):
-            s = centerS[tpcf.iS]
-            iStop = len(s) // binFactor
+        def getDataExpxiss(infile,smax):
+            dat_1d = fits.open(infile)[4]
+            sep1d = fits.open(infile)[2].data['binCenter']
+            sep1derr = (sep1d[1]-sep1d[0])/2
+            tpcfell2,tpcfell2err = dat_1d.data['ell2corr'],dat_1d.data['ell2correrr']
+            tpcfell4,tpcfell4err = dat_1d.data['ell4corr'],dat_1d.data['ell4correrr']
+            condition = (sep1d <= smax)
+            return((sep1d[condition],sep1derr,tpcfell2[condition],tpcfell2err[condition]),(sep1d[condition],sep1derr,tpcfell4[condition],tpcfell4err[condition]))
+
+        def plot1Ddist(pltdat1d):
+            yRan = np.max((pltdat1d[1],pltdat1d[2],pltdat1d[3]))-np.min((pltdat1d[1],pltdat1d[2],pltdat1d[3]))
             plt.figure()
-            plt.title(self.config.__class__.__name__)
-            plt.step(s[:iStop], tpcf.RR[:iStop]/nRR, where='mid', label='RR', linewidth=0.4)
-            plt.step(s[:iStop], tpcf.DR[:iStop]/nDR, where='mid', label='DR', linewidth=0.4)
-            plt.step(s[:iStop], tpcf.DD[:iStop]/nDD, where='mid', label='DD', linewidth=0.4)
-            plt.legend()
-            plt.xlabel('s')
-            plt.ylabel('probability')
+            plt.grid(True,ls='-.',alpha=.6)
+            plt.title(self.config.__class__.__name__+'\n'+'1D Distributions')
+            plt.step(pltdat1d[0],pltdat1d[1],color='darkorange',lw=2,label='RR')
+            plt.step(pltdat1d[0],pltdat1d[2],color='forestgreen',lw=2,label='DR')
+            plt.step(pltdat1d[0],pltdat1d[3],color='royalblue',lw=2,label='DD')
+            plt.legend(framealpha = 1, loc = 'upper left')
+            plt.xlim(pltdat1d[0][0],pltdat1d[0][-1])
+            plt.ylim(np.min((pltdat1d[1],pltdat1d[2],pltdat1d[3]))-0.04*yRan,np.max((pltdat1d[1],pltdat1d[2],pltdat1d[3]))+0.04*yRan)
             pdf.savefig()
             plt.close()
 
-        def xissPlot(pdf, sMax):
-            S = centerS[tpcf.iS]
-            iStop = None if S[-1]<sMax else next(iter(np.where(S >= sMax)[0]))
-            s = S[:iStop]
-            xi = ( (tpcf.RR[:iStop]/nRR + tpcf.DD[:iStop]/nDD - 2*tpcf.DR[:iStop]/nDR)
-                   / (tpcf.RR[:iStop]/nRR) )
-            xie = ( (np.sqrt(tpcf.DDe2[:iStop])/nDD)
-                    / (tpcf.RR[:iStop]/nRR) )
-            ds = s[1]-s[0]
-
+        def plot1Dxiss(pltdat1d):
+            yRan = (pltdat1d[2]*pltdat1d[0]**2).max()-(pltdat1d[2]*pltdat1d[0]**2).min()
             plt.figure()
-            plt.title(self.config.__class__.__name__)
-            plt.errorbar(s, (xi*s*s), yerr=(xie*s*s), xerr=ds/2, fmt='.')
-            plt.xlabel(r"$\mathrm{s\ [h^{-1} Mpc]}$")
-            plt.ylabel(r"$\mathrm{\xi(s)s^2}$")
-            plt.grid()
+            plt.grid(True,ls='-.',alpha=.6)
+            plt.title(self.config.__class__.__name__+'\n'+'1D Correlation')
+            plt.errorbar(pltdat1d[0],pltdat1d[2]*pltdat1d[0]**2,xerr=pltdat1d[1],yerr=pltdat1d[3]*pltdat1d[0]**2,
+                         ls='',marker='o',mfc='grey',mec='k',color='k',capsize=2.4,lw=1.2,ms=5)
+            plt.xlabel(r'$s$ [$h^{-1}$Mpc]')
+            plt.ylabel(r'$\hat \xi(s) \cdot s^2$')
+            plt.xlim(pltdat1d[0][0]-2*pltdat1d[1],pltdat1d[0][-1]+2*pltdat1d[1])
+            plt.ylim((pltdat1d[2]*pltdat1d[0]**2).min()-0.1*yRan,(pltdat1d[2]*pltdat1d[0]**2).max()+0.1*yRan)
             pdf.savefig()
             plt.close()
 
+        def plotExpell2(pltdat1d):
+            yRan = (pltdat1d[2]*pltdat1d[0]**2).max()-(pltdat1d[2]*pltdat1d[0]**2).min()
+            plt.figure()
+            plt.grid(True,ls='-.',alpha=.6)
+            plt.title(self.config.__class__.__name__+'\n'+'Expanded Correlation $\ell=2$')
+            plt.errorbar(pltdat1d[0],pltdat1d[2]*pltdat1d[0]**2,xerr=pltdat1d[1],yerr=pltdat1d[3]*pltdat1d[0]**2,
+                         ls='',marker='s',mfc='r',mec='maroon',color='maroon',capsize=2.4,lw=1.2,ms=5)
+            plt.xlabel(r'$s$ [$h^{-1}$Mpc]')
+            plt.ylabel(r'$\hat \xi_{2}(s) \cdot s^2$')
+            plt.xlim(pltdat1d[0][0]-2*pltdat1d[1],pltdat1d[0][-1]+2*pltdat1d[1])
+            plt.ylim((pltdat1d[2]*pltdat1d[0]**2).min()-0.1*yRan,(pltdat1d[2]*pltdat1d[0]**2).max()+0.1*yRan)
+            pdf.savefig()
+            plt.close()
+            
+        def plotExpell4(pltdat1d):
+            yRan = (pltdat1d[2]*pltdat1d[0]**2).max()-(pltdat1d[2]*pltdat1d[0]**2).min()
+            plt.figure()
+            plt.grid(True,ls='-.',alpha=.6)
+            plt.title(self.config.__class__.__name__+'\n'+'Expanded Correlation $\ell=4$')
+            plt.errorbar(pltdat1d[0],pltdat1d[2]*pltdat1d[0]**2,xerr=pltdat1d[1],yerr=pltdat1d[3]*pltdat1d[0]**2,
+                         ls='',marker='^',mfc='limegreen',mec='darkgreen',color='darkgreen',capsize=2.4,lw=1.2,ms=6)
+            plt.xlabel(r'$s$ [$h^{-1}$Mpc]')
+            plt.ylabel(r'$\hat \xi_{4}(s) \cdot s^2$')
+            plt.xlim(pltdat1d[0][0]-2*pltdat1d[1],pltdat1d[0][-1]+2*pltdat1d[1])
+            plt.ylim((pltdat1d[2]*pltdat1d[0]**2).min()-0.1*yRan,(pltdat1d[2]*pltdat1d[0]**2).max()+0.1*yRan)
+            pdf.savefig()
+            plt.close()
+
+        pltdat1ddist = getData1Ddists(infile,smax)
+        pltdat1dxiss = getData1Dxiss(infile,smax)
+        pltdatExpell2 = getDataExpxiss(infile,smax)[0]
+        pltdatExpell4 = getDataExpxiss(infile,smax)[1]
+        
         with PdfPages(infile.replace('fits','pdf')) as pdf:
-            for i in range(5):
-                tpcfPlot(pdf, 2**i)
-            xissPlot(pdf, 200)
+            plot1Ddist(pltdat1ddist)
+            plot1Dxiss(pltdat1dxiss)
+            plotExpell2(pltdatExpell2)
+            plotExpell4(pltdatExpell4)
             print('Wrote %s'% pdf._file.fh.name, file=self.out)
+            
         return
 
 class AdderTPCF2D(object):
