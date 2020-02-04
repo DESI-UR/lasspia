@@ -211,7 +211,7 @@ class combinatorial(La.routine):
         hdulist = fits.open(self.inputFileName)
         return hdulist[name]
 
-    def combineOutput(self):
+    def combineOutput(self,grid2d = None):
         jobFiles = [self.outputFileName + self.jobString(iJob)
                     for iJob in range(self.nJobs)]
 
