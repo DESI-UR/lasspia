@@ -504,6 +504,8 @@ class integration(La.routine):
             plt.step(pltdat1d[0],pltdat1d[2],color='forestgreen',lw=2,label='DR')
             plt.step(pltdat1d[0],pltdat1d[3],color='royalblue',lw=2,label='DD')
             plt.legend(framealpha = 1, loc = 'upper left')
+            plt.xlabel(r'$s$ [$h^{-1}$Mpc]')
+            plt.ylabel(r'Prob.')
             plt.xlim(pltdat1d[0][0],pltdat1d[0][-1])
             plt.ylim(np.min((pltdat1d[1],pltdat1d[2],pltdat1d[3]))-0.04*yRan,np.max((pltdat1d[1],pltdat1d[2],pltdat1d[3]))+0.04*yRan)
             pdf.savefig()
