@@ -140,7 +140,8 @@ class preprocessing(La.routine):
 
             plt.figure()
             plt.title(self.config.__class__.__name__)
-            plt.imshow(np.fliplr(h2d.T.toarray()), origin='lower', extent=ext, interpolation='none', cmap='gray')
+            vmax = np.mean(np.fliplr(h2d.T.toarray())[np.fliplr(h2d.T.toarray())!=0.])*(4/5)
+            plt.imshow(np.fliplr(h2d.T.toarray()), origin='lower', extent=ext, interpolation='none', cmap='inferno',vmax=vmax)
             plt.colorbar().set_label('random count')
             plt.xlabel(r'$\alpha$ [$\degree$]')
             plt.ylabel(r'$\delta$ [$\degree$]')
