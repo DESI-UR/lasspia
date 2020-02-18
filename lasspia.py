@@ -31,18 +31,15 @@ def parseArgs():
 
     parser.add_argument('--show', action='store_true',
                         help='Show info and HDU headers of the output file.')
-
-    parser.add_argument('--plot', action='store_true',
-                        help='Run the plot() method of the routine.')
     
     parser.add_argument('--smax', metavar='smax', type=float, nargs=1,
                         help='Maximum value of s in plot() output.')
 
+    parser.add_argument('--plot', action='store_true',
+                        help='Run the plot() method of the routine.')
+
     parser.add_argument('--iSliceZ', metavar='iSliceZ', type=int, nargs=1,
                         help='Set the index of the z-slice (only for classes inheriting from lasspia/zSlicing.py:SlicesZ.')
-
-    parser.add_argument('--grid2d', action='store_true',
-                        help='Will output the 2D distributions as functions of sigma and pi if True.')
 
     args = parser.parse_args()
     parseEnv(args)
@@ -88,15 +85,11 @@ if __name__ == "__main__":
         routine = getInstance(args.routineFile, (config,), kwargs)
         if args.show: routine.showFitsHeaders()
         elif args.plot: routine.plot(smax = args.smax)
-        
+        elif args.nJobs: routine.combineOutput()
         elif (issubclass(config.__class__, SlicesZ)
               and config.iSliceZ is None):
             routine.combineOutputZ()
-        elif (args.grid2d == True)&(args.nJobs == None): routine(grid2d = True)
-        elif (args.grid2d == False)&(args.nJobs == None): routine()
-        
-        elif (args.nJobs != 0)&(args.grid2d == True): routine.combineOutput(grid2d = True)
-        elif (args.nJobs != 0)&(args.grid2d == False): routine.combineOutput(grid2d = False)
+        else: routine()
 
     elif type(kwargs) is list:
         routines = [getInstance(args.routineFile, (config,), kw) for kw in kwargs]
