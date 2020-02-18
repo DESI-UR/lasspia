@@ -9,8 +9,8 @@ def openSDSS(files):
     ])
 
 
-class wrapSDSS(object):
-    """Catalog wrapper interface for SDSS.
+class wrapDR9(object):
+    """Catalog wrapper interface for SDSS DR9 Catalogs.
 
     Wrappers must provide the following properties:
     * weight
@@ -40,10 +40,10 @@ class wrapSDSS(object):
     def __len__(self): return len(self.ctlg)
 
 
-class wrapRandomSDSS(wrapSDSS):
+class wrapRandomDR9(wrapDR9):
     """Catalog wrapper with SDSS random catalog weights."""
     def __init__(self, files, shiftRA=False):
-        super(wrapRandomSDSS, self).__init__(files,shiftRA)
+        super(wrapRandomDR9, self).__init__(files,shiftRA)
 
     @property
     def weight(self): return self.weightZ * self.weightNoZ
@@ -58,10 +58,10 @@ class wrapRandomSDSS(wrapSDSS):
         '''Z-independent weight.'''
         return np.ones(len(self.ctlg), dtype=int)
 
-class wrapObservedSDSS(wrapSDSS):
+class wrapObservedDR9(wrapDR9):
     """Catalog wrapper with SDSS observed catalog weights."""
     def __init__(self, files, shiftRA=False):
-        super(wrapObservedSDSS, self).__init__(files,shiftRA)
+        super(wrapObservedDR9, self).__init__(files,shiftRA)
 
     @property
     def weight(self):
