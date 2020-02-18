@@ -139,10 +139,10 @@ class preprocessing(La.routine):
             ext = (ra[-1]-dra, ra[0]+dra, dc[0]-ddc, dc[-1]+ddc)
 
             plt.figure()
-            plt.title(self.config.__class__.__name__)
+            plt.title(self.config.__class__.__name__+'\n'+'Angular Distribution')
             vmax = np.mean(np.fliplr(h2d.T.toarray())[np.fliplr(h2d.T.toarray())!=0.])*(4/5)
             plt.imshow(np.fliplr(h2d.T.toarray()), origin='lower', extent=ext, interpolation='none', cmap='inferno',vmax=vmax)
-            plt.colorbar().set_label('random count')
+            plt.colorbar().set_label('Random Count')
             plt.xlabel(r'$\alpha$ [$\degree$]')
             plt.ylabel(r'$\delta$ [$\degree$]')
             pdf.savefig()
@@ -154,10 +154,11 @@ class preprocessing(La.routine):
             dz = z[1]-z[0]
 
             plt.figure()
-            plt.title(self.config.__class__.__name__)
-            plt.bar(z, P, dz, color='blue', edgecolor='blue')
-            plt.xlabel('redshift')
-            plt.ylabel('probability')
+            plt.grid(True,ls='-.',alpha=.6)
+            plt.title(self.config.__class__.__name__+'\n'+'Redshift Distribution')
+            plt.bar(z, P, dz, color='cadetblue', edgecolor='cadetblue')
+            plt.xlabel('Redshift')
+            plt.ylabel('Prob.')
             pdf.savefig()
             plt.close()
 
