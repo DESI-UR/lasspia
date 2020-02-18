@@ -211,7 +211,7 @@ class combinatorial(La.routine):
         hdulist = fits.open(self.inputFileName)
         return hdulist[name]
 
-    def combineOutput(self,grid2d = None):
+    def combineOutput(self):
         jobFiles = [self.outputFileName + self.jobString(iJob)
                     for iJob in range(self.nJobs)]
 
@@ -223,6 +223,7 @@ class combinatorial(La.routine):
                                          h0['uThetaZZ'].data['count'].dtype.type,
                                          len(h0['centerZ'].data))
             cputime = 0.
+            walltime = 0.
 
             for jF in jobFiles:
                 with fits.open(jF) as h:
@@ -237,6 +238,7 @@ class combinatorial(La.routine):
                     uThetaZZe2 += csr_matrix((u['err2'], (u['binTheta'],u['binZdZ'])),
                                              shape=uThetaZZ.shape)
                     cputime += h['uThetaZZ'].header['cputime']
+                    walltime += h['uThetaZZ'].header['walltime']
 
             self.hdus.append(h0["centerTheta"])
             self.hdus.append(h0["centerZ"])
@@ -246,5 +248,6 @@ class combinatorial(La.routine):
             halve(uThetaZZe2)
             self.hdus.extend(self.fguHDU((fTheta, gThetaZ, uThetaZZ, uThetaZZe2)))
             self.hdus[-1].header['cputime'] = cputime
+            self.hdus[-1].header['walltime'] = walltime
             self.addNormalizations()
             self.writeToFile()

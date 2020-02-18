@@ -38,10 +38,12 @@ class configuration(object):
         sbing = self.binningS()
         return {'bins':2*sbing['bins'], 'range':(-sbing['range'][1], sbing['range'][1])}
     def binningPi(self): return self.binningSigma()
+    def binningMu(self): pass
     def omegasMKL(self): pass
     def H0(self): pass
     def lightspeed(self): pass
     def nBinsMaskZ(self): return 0
+    def grid2D(self): return False
 
 
     '''Functions not meant to be redefined.'''
