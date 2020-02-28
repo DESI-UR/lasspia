@@ -2,7 +2,8 @@
 
 A Python implementation of the algorithm described in [A
 Computationally Efficient Approach for Calculating Galaxy Two-Point
-Correlations](https://arxiv.org/pdf/1611.09892.pdf).
+Correlations](https://arxiv.org/pdf/1611.09892.pdf). Additionally includes
+the Legendre expansion of the TPCF. 
 
 <!-- toc -->
 
