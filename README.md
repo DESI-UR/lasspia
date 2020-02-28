@@ -37,7 +37,7 @@ This implementation depends on the following Python packages:
 * [AstroPy](http://www.astropy.org)
 * [SciPy library](https://github.com/scipy/scipy)
 * [NumPy](http://www.numpy.org)
-* [Matplotlib](http://matplotlib.org) (optional)
+* [Matplotlib](http://matplotlib.org) (recommended)
 
 The included configurations rely on DR9 data from the Sloan Digital Sky Survey:
 * [SDSS archive](https://data.sdss.org/sas/dr9/boss/lss/)
@@ -46,23 +46,17 @@ The included configurations rely on DR9 data from the Sloan Digital Sky Survey:
 
 Clone the repository to your local system:
 ```
-git clone https://github.com/zbrown89/lasspia.git
+git clone https://github.com/DESI-UR/lasspia.git
 ```
 
-If desired, use virtualenv to install the prerequisites:
-```
-virtualenv venv
-source venv/bin/activate
-pip install numpy astropy scipy
-```
-
-Download the SDSS galaxy survey catalogs:
+Download the SDSS DR9 galaxy survey catalogs and create appropriate directories:
 ```
 cd lasspia/
-./downloadDR9.py
+./dataSetup.py
 ```
 
-Test your installation by running the 'quickscan.py' routine.
+Test your installation by running the 'quickscan.py' routine. This should return some 
+information about the galaxy and random catalogs. 
 ```
 ./lasspia.py configs/cmassS.py routines/quickscan.py
 ```
