@@ -154,8 +154,7 @@ accept "job arrays" use an environment variable to specify the job
 index, in which case it may be convenient to specify `--iJobEnv`
 rather than `--iJob`.  After all units have succeeded, their outputs
 may be combined by repeating the `--nJobs` command, absent any of
-`--nCores`, `--iJob`, or `--iJobEnv`.  A minimal Dockerfile is
-included for use with batch systems that run containers.
+`--nCores`, `--iJob`, or `--iJobEnv`.
 
 ### Parallel and Batch Examples
 
