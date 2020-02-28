@@ -1,8 +1,8 @@
 # Fast Calculation for Galaxy Two-Point Correlations
 
-A Python implementation of the algorithm described in [A
+A Python 3 implementation of the algorithm described in [A
 Computationally Efficient Approach for Calculating Galaxy Two-Point
-Correlations](https://arxiv.org/pdf/1611.09892.pdf). Additionally includes
+Correlations](https://arxiv.org/pdf/1611.09892.pdf). Now includes
 the Legendre expansion of the TPCF. 
 
 <!-- toc -->
