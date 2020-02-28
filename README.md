@@ -19,7 +19,9 @@ Correlations](https://arxiv.org/pdf/1611.09892.pdf).
 - [Time-Saving and Memory-Saving Strategies](#time-saving-and-memory-saving-strategies)
   * [Maximum Delta: Z](#maximum-delta-z)
   * [Maximum Delta: RA and Dec](#maximum-delta-ra-and-dec)
-- [Regions and Z-slicing](#regions-and-z-slicing)
+- [Subsampling and Z-slicing](#subsampling-and-z-slicing)
+  * [Subsampling](#subsampling)
+  * [Z-Slicing](#z-slicing)
 - [Contributing](#contributing)
 - [Versioning](#versioning)
 - [Authors](#authors)
@@ -115,15 +117,13 @@ View the headers of the output file.
 ```
 
 ### Integration
-Run the integration routine, which includes l = 0,2,4 Legendre multipoles.
+Run the integration routine, which includes l = 2,4 Legendre multipoles.
 ```
 ./lasspia.py configs/cmassS_coarse.py routines/integration.py
 ```
 If you get "MemoryError", you can break the integration into slices of
 bins of theta by passing `--nJobs` and `--nCores` (or `--iJob`)
-arguments, and combining the output as in the prior step example. However,
-running this routine in parallel will remove the Legendre expansion. You
-will have to do this yourself with a sigma/pi grid.
+arguments, and combining the output as in the prior step example.
 
 Run with parallel jobs.
 ```
@@ -133,6 +133,15 @@ Combine those jobs.
 ```
 ./lasspia.py configs/cmassS_coarse.py routines/integration.py --nJobs 4 
 ```
+
+Run the integration.plot() method to plot the distributions DD(s),DR(s),and RR(s).
+Additionally, compute and plot the correlation function (using the LS estimator) and 
+the l=2,4 Legendre multipoles. Remember to define the maximum s for your plots.
+
+```
+./lasspia.py configs/cmassS_coarse.py routines/integration.py --plot --smax 180
+```
+
 
 ## More Parallel and Batch Processing
 
@@ -196,10 +205,72 @@ one of the two strategies explained below.  Such exclusion can
 significantly reduce both the time and memory required for the
 computation.
 
-## Regions and Z-slicing
+## Subsampling and Z-slicing
 
-I have not tried running the new Legendre expansion version of the 
-`integration` step with z-slicing. Proceed with caution for now...
+### Subsampling
+
+You can use a smaller portion of the catalogs as input to the
+algorithm simply by configuring the desired range for any of redshift
+(`binningZ()`), right ascension (`binningRA()`), or declination
+(`binningDec()`).  Catalog entries that fall outside of the defined
+ranges will be excluded from processing, except that the overall
+normalization factors are calculated from the unfiltered catalogs.
+
+### Z-Slicing
+
+It is possible to process data in multiple configurations of
+subsampled redshift, the results of which can be combined at the
+integration step.  For the result to match a single (un-subsampled
+redshift) configuration, the subsampled redshift ranges must overlap
+by at least `maxDeltaZ`, and the configuration option `nBinsMaskZ`
+must be set to the number bins overlapping the prior (lower z values)
+configuration.  The integration step will omit contributions from
+cells with both z-bin indices less than `nBinsMaskZ`, so that results
+can be combined without double-counting.
+
+In order to avoid the need to laboriously write and maintain multiple
+mutually consistent z-slicing configurations, one can define a
+multi-configuration in which consistency is automatic, by using the
+[zSlicing](lasspia/zSlicing.py#L8) function.  The
+returned configuration class has an automatically defined attribute
+`iSliceZ` which can be used to customize the definition of each
+subsample in z, for example by creating a child configuration in which
+`binningRA` is dependent in `iSliceZ`.
+
+For convenience, one can implement mutually consistent z-slicing by
+defining a pair of configuration functions in a class inheriting from
+that returned by `zSlicing`.  The first configuration function,
+`zBreaks`, is an ordered list consisting of the lower bound of the
+lowest z range and the desired upper bound of each z range.  The
+second configuration function, `zMaxBinWidths`, is a corresponding
+list of desired maximum bin widths for each range.  The actual ranges
+and bin widths used may vary slightly from those configured due to the
+constraint that ranges overlap exactly at bin boundaries.
+
+An example configuration showing the use of the `zSlicing` class
+function and the `zBreaks` and `zMaxBinWidths` configuration options
+is provided in
+[cmassS_subsample_byZ.py](configs/cmassS_subsample_byZ.py).
+This configuration defines two slices in z.  The first slice may be
+processed with the following series of commands.
+```
+./lasspia.py configs/cmassS_subsample_byZ.py routines/preprocessing.py --iSliceZ 0
+./lasspia.py configs/cmassS_subsample_byZ.py routines/combinatorial.py --iSliceZ 0
+./lasspia.py configs/cmassS_subsample_byZ.py routines/integration.py --iSliceZ 0
+```
+The second slice may be processed by running the same series of
+commands with `--iSliceZ 1`.  Each slice may be analyzed individually, for example:
+```
+./lasspia.py configs/cmassS_subsample_byZ.py routines/integration.py --iSliceZ 0 --plot --smax 180
+```
+Alternatively, the slices may be combined at the integration step by omitting the `--iSliceZ` option:
+```
+./lasspia.py configs/cmassS_subsample_byZ.py routines/integration.py
+```
+and the combined result may be subsequently analyzed.
+```
+./lasspia.py configs/cmassS_subsample_byZ.py routines/integration.py --plot --smax 180
+```
 
 ## Versioning
 
