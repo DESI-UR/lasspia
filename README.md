@@ -136,14 +136,14 @@ Combine those jobs.
 
 Run the integration.plot() method to plot the distributions DD(s),DR(s),and RR(s).
 Additionally, compute and plot the correlation function (using the LS estimator) and 
-the l=2,4 Legendre multipoles. Remember to define the maximum s for your plots.
+the l=2,4 Legendre multipoles. Remember to define the maximum s for your plots,`--smax`.
 
 ```
 ./lasspia.py configs/cmassS_coarse.py routines/integration.py --plot --smax 180
 ```
 
-If you want to return the full grid, xi of sigma/pi, remember to set grid2D to True in
-your configuration file. It defaults to False. 
+If you want to return the full grid, xi of sigma/pi, remember to set `grid2D` to `True` in
+your configuration file. It defaults to `False`. 
 
 ## More Parallel and Batch Processing
 
